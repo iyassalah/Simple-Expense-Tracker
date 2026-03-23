@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "0g": "^0.4.2",
+    "typescript": "^5.9.3"
+  }
+}
