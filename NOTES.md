@@ -8,4 +8,4 @@ Requirements: [README.md](./README.md).
 
 ## Features implemented
 
-- None yet.
+- Established backend infrastructure: database connectivity (TypeORM + PostgreSQL via `DATABASE_URL`), application-level validation and error handling, and API documentation scaffold at `/docs`.
