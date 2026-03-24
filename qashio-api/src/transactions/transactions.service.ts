@@ -3,9 +3,15 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Category } from '../categories/entities/category.entity';
+import {
+  TRANSACTION_CREATED,
+  TRANSACTION_UPDATED,
+} from '../transaction-events/transaction-events.constants';
+import { transactionPayloadFromEntity } from '../transaction-events/transaction-persisted.payload';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import {
   GetTransactionsQueryDto,
@@ -21,6 +27,7 @@ export class TransactionsService {
     private readonly transactionsRepository: Repository<Transaction>,
     @InjectRepository(Category)
     private readonly categoriesRepository: Repository<Category>,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async create(dto: CreateTransactionDto): Promise<Transaction> {
@@ -33,7 +40,12 @@ export class TransactionsService {
       date: dto.date,
     });
 
-    return this.transactionsRepository.save(transaction);
+    const saved = await this.transactionsRepository.save(transaction);
+    this.eventEmitter.emit(
+      TRANSACTION_CREATED,
+      transactionPayloadFromEntity(saved),
+    );
+    return saved;
   }
 
   async findAll(query: GetTransactionsQueryDto): Promise<{
@@ -108,7 +120,12 @@ export class TransactionsService {
       transaction.date = dto.date;
     }
 
-    return this.transactionsRepository.save(transaction);
+    const saved = await this.transactionsRepository.save(transaction);
+    this.eventEmitter.emit(
+      TRANSACTION_UPDATED,
+      transactionPayloadFromEntity(saved),
+    );
+    return saved;
   }
 
   async remove(id: string): Promise<void> {

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -19,6 +20,8 @@ import { Budget } from './entities/budget.entity';
 
 @Injectable()
 export class BudgetsService {
+  private readonly logger = new Logger(BudgetsService.name);
+
   constructor(
     @InjectRepository(Budget)
     private readonly budgetsRepository: Repository<Budget>,
@@ -140,6 +143,44 @@ export class BudgetsService {
       remaining,
       percentUsed,
     };
+  }
+
+  /**
+   * After an expense is persisted, log a warning for any budget on the same category
+   * whose period contains the transaction date and whose cap is reached or exceeded.
+   */
+  async warnIfBudgetsExceededAfterExpense(
+    categoryId: string,
+    transactionDate: Date,
+    type: TransactionType,
+  ): Promise<void> {
+    if (type !== TransactionType.EXPENSE) {
+      return;
+    }
+
+    const budgets = await this.findAll({ categoryId });
+    const t = transactionDate.getTime();
+
+    for (const budget of budgets) {
+      if (
+        t < budget.periodStart.getTime() ||
+        t > budget.periodEnd.getTime()
+      ) {
+        continue;
+      }
+
+      const usage = await this.getUsage(budget.id, {});
+      const overCap =
+        usage.capAmount > 0
+          ? usage.spent >= usage.capAmount
+          : usage.spent > 0;
+
+      if (overCap) {
+        this.logger.warn(
+          `Budget ${budget.id} (category ${usage.categoryId}): spent ${usage.spent} meets or exceeds cap ${usage.capAmount} (${usage.percentUsed != null ? usage.percentUsed.toFixed(1) : 'n/a'}% used)`,
+        );
+      }
+    }
   }
 
   private assertValidPeriod(start: Date, end: Date): void {
