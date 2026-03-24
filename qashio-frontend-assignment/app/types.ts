@@ -1,3 +1,7 @@
+/**
+ * @deprecated Legacy mock shape for placeholder UI. Use types from
+ * `@/lib/types/api` for the real Nest API (`Transaction`, `Category`, …).
+ */
 export interface Transaction {
   id: string;
   date: string;

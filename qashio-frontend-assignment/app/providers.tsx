@@ -25,8 +25,23 @@ const theme = createTheme({
   },
 });
 
+const queryClientDefaults = {
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      retry: 1,
+      refetchOnWindowFocus: true,
+    },
+    mutations: {
+      retry: 0,
+    },
+  },
+};
+
 export function Providers({ children }: { children: ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(
+    () => new QueryClient(queryClientDefaults),
+  );
 
   return (
     <QueryClientProvider client={queryClient}>
