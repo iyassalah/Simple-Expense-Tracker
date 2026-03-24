@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CategoriesModule } from './categories/categories.module';
+import { TransactionsModule } from './transactions/transactions.module';
 
 @Module({
   // Root infrastructure: load env config globally, then create TypeORM connection from DATABASE_URL.
@@ -20,6 +21,7 @@ import { CategoriesModule } from './categories/categories.module';
       }),
     }),
     CategoriesModule,
+    TransactionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
