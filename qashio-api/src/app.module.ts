@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { BudgetsModule } from './budgets/budgets.module';
 import { CategoriesModule } from './categories/categories.module';
 import { TransactionsModule } from './transactions/transactions.module';
 
@@ -22,6 +23,7 @@ import { TransactionsModule } from './transactions/transactions.module';
     }),
     CategoriesModule,
     TransactionsModule,
+    BudgetsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
