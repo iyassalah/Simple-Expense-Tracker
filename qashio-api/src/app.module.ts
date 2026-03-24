@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { CategoriesModule } from './categories/categories.module';
 
 @Module({
   // Root infrastructure: load env config globally, then create TypeORM connection from DATABASE_URL.
@@ -18,6 +19,7 @@ import { AppService } from './app.service';
         synchronize: false,
       }),
     }),
+    CategoriesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
