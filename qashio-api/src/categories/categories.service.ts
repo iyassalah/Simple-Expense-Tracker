@@ -15,7 +15,10 @@ export class CategoriesService {
   ) {}
 
   async create(dto: CreateCategoryDto): Promise<Category> {
-    const category = this.categoriesRepository.create({ name: dto.name.trim() });
+    const category = this.categoriesRepository.create({
+      name: dto.name.trim(),
+      kind: dto.kind,
+    });
     try {
       return await this.categoriesRepository.save(category);
     } catch (e) {

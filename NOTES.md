@@ -1,46 +1,46 @@
-# Notes from the candidate
-
-Requirements: [README.md](./README.md).
-
 ## For the reviewer
 
-- Keep **one submission repo** rooted here (`full-stack-task/`), alongside `docker-compose.yml`, so the run command in the brief matches the layout.
+- This submission repo is rooted at `full-stack-task/` (same level as `docker-compose.yml`), so the brief’s run command works as-is.
 
-## Features implemented
+## Run (one command)
 
-- Established backend infrastructure: database connectivity (TypeORM + PostgreSQL via `DATABASE_URL`), application-level validation and error handling, and API documentation scaffold at `/docs`.
-- Categories API: `POST /categories` and `GET /categories` (unique category names, DTO validation, Swagger under `/docs`). Run DB migrations from `qashio-api/` with `npm run migration:run` after clone.
-- Transactions API: `POST/GET/GET:id/PUT/DELETE /transactions` with category relation checks, validation, pagination/sort/filter on list, and Swagger docs under `/docs`.
-- Budgets API: `POST/GET/GET:id/PUT/DELETE /budgets`, optional `GET /budgets?categoryId=…`, and `GET /budgets/:id/usage` for spend vs cap (expenses in period, optional `from`/`to` clamped to the budget window). New migration `CreateBudgetsTable`; run `npm run migration:run` from `qashio-api/`.
-- **Transaction events (in-process):** `@nestjs/event-emitter` — after each successful create/update, `transaction.created` / `transaction.updated` fire with id, category, amount, type, dates. Listeners: structured logs (`TransactionActivityListener`) and async budget threshold warnings via `BudgetsService.warnIfBudgetsExceededAfterExpense` (`TransactionBudgetListener`). The README lists Kafka as a preferred streaming stack; this submission uses the Nest event emitter for scope and local reliability — Kafka can replace this layer later if needed.
-- **Frontend foundation :** `NEXT_PUBLIC_API_BASE_URL` (see `.env.example`); `lib/api-client.ts` + `lib/types/api.ts`; React Query defaults in `app/providers.tsx`. Nest **CORS** via `CORS_ORIGIN` / dev defaults (`qashio-api`).
-- **Transactions list:** `/transactions` uses **MUI DataGrid** with **server** pagination (**10**/page), **sort**, and toolbar filters (**type**, **category**, **from/to** dates) against `GET /transactions`; category names joined from `GET /categories`; loading overlay, **“No transactions found”**, and **MUI `Alert`** on errors. API helper: `lib/api/transactions.ts`.
-- **Transaction detail:** **Row click** opens a **MUI `Dialog`** (`TransactionDetailDialog.tsx`) with **`fetchTransaction` → `GET /transactions/:id`** via React Query; **spinner** while loading, **`Alert`** on error (including **404**); full fields plus **category name** from the same category map as the list. Close clears selection.
-- **Transaction creation:** **`/transactions/new`** page with MUI form controls (amount, type, category dropdown, date picker) using React Query `useQuery` (categories) + `useMutation` (`POST /transactions`); on success invalidates `['transactions']` and redirects back to `/transactions`.
-- **Backend feature usage:** Added frontend usage for budgets (`/budgets`) including list + usage view (`GET /budgets/:id/usage`) and CRUD (`POST/PUT/DELETE /budgets`), category creation UX using `POST /categories` (Add Category dialog), and transaction edit/delete UX in the transaction detail dialog using `PUT/DELETE /transactions/:id`.
+From `full-stack-task/`:
 
-## Environment & URLs (implementation)
+```bash
+docker-compose up --build
+```
 
-The canonical assignment text is **[README.md](./README.md)** — this section is for running the implemented stack.
+Notes:
+- The API container **auto-runs TypeORM migrations on startup** (so no extra manual steps are required).
+- If you previously ran containers, `docker-compose down -v` will reset the DB volume.
 
-### Backend (`qashio-api`)
+## URLs
 
-- **`DATABASE_URL`** — PostgreSQL (required). Migrations: `npm run migration:run` from `qashio-api/`.
-- **`PORT`** — API port (default `3000`).
-- **`CORS_ORIGIN`** — Comma-separated browser origins. If unset in development, Nest defaults in `main.ts` allow common localhost ports. **Docker Compose** sets `CORS_ORIGIN=http://localhost:4000` for the mapped frontend.
+| Service | URL |
+|--------|-----|
+| Frontend | http://localhost:4000 |
+| API | http://localhost:3000 |
+| Swagger | http://localhost:3000/docs |
 
-### Frontend (`qashio-frontend-assignment`)
+## What’s implemented (high level)
 
-- **`NEXT_PUBLIC_API_BASE_URL`** — Nest API base URL, no trailing slash (e.g. `http://localhost:3000`). Copy `.env.example` to `.env.local` for `next dev`. In development, if unset, the app falls back to `http://localhost:3000` with a console warning. Docker build uses `NEXT_PUBLIC_API_BASE_URL` from `docker-compose.yml` build `args`.
+### Backend (NestJS + TypeORM)
 
-### Default Docker Compose port mappings
+- **Categories**: `POST /categories`, `GET /categories`
+- **Transactions**: full CRUD `POST/GET/GET:id/PUT/DELETE /transactions` + list pagination/sort/filters
+- **Budgets**: CRUD `POST/GET/GET:id/PUT/DELETE /budgets` + `GET /budgets/:id/usage` (spend vs cap)
+- **Budget rule**: **no overlapping budgets** for the same category (409 Conflict with a clear message)
+- **Docs**: Swagger at `/docs`
 
-| Service    | URL |
-|------------|-----|
-| Frontend   | http://localhost:4000 |
-| API        | http://localhost:3000 |
-| Swagger UI | http://localhost:3000/docs |
+### Frontend (Next.js App Router + React Query + MUI)
 
-## Run notes
+- **Transactions list**: `/transactions` (DataGrid, pagination 10/page, sort + filters)
+- **Transaction detail**: row click opens dialog with full details + edit/delete
+- **Create transaction**: `/transactions/new`
+- **Budgets page**: `/budgets` (CRUD + usage view)
+- **Categories management**: `/categories` (table + add dialog)
 
-- After cloning, run DB migrations from `qashio-api/`: `npm run migration:run`.
+## Environment
+
+The canonical assignment text is **[README.md](./README.md)**.
+- Docker Compose builds the frontend with `NEXT_PUBLIC_API_BASE_URL=http://localhost:3000` (so the browser can reach the API at the same host).

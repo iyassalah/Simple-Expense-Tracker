@@ -4,9 +4,12 @@
 
 export type TransactionType = 'income' | 'expense';
 
+export type CategoryKind = 'income' | 'expense';
+
 export interface Category {
   id: string;
   name: string;
+  kind: CategoryKind;
   createdAt: string;
   updatedAt: string;
 }

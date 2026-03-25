@@ -25,7 +25,7 @@ import {
   type CreateTransactionPayload,
 } from '@/lib/api/transactions';
 import { ApiError } from '@/lib/api-client';
-import type { TransactionType } from '@/lib/types/api';
+import type { CategoryKind, TransactionType } from '@/lib/types/api';
 
 function getApiErrorMessage(err: unknown): string {
   return err instanceof ApiError
@@ -73,6 +73,11 @@ export default function NewTransactionPage() {
     queryKey: ['categories'],
     queryFn: fetchCategories,
   });
+
+  const eligibleCategories = useMemo(() => {
+    const requiredKind: CategoryKind = type === 'income' ? 'income' : 'expense';
+    return categories.filter((c) => c.kind === requiredKind);
+  }, [categories, type]);
 
   const {
     mutate: submit,
@@ -164,7 +169,17 @@ export default function NewTransactionPage() {
               label="Type"
               value={type}
               onChange={(e) => {
-                setType(e.target.value as TransactionType);
+                const nextType = e.target.value as TransactionType;
+                setType(nextType);
+                // Clear any currently selected category that no longer matches the type.
+                const requiredKind: CategoryKind =
+                  nextType === 'income' ? 'income' : 'expense';
+                const stillValid = categories.some(
+                  (c) => c.id === categoryId && c.kind === requiredKind,
+                );
+                if (!stillValid) {
+                  setCategoryId('');
+                }
               }}
             >
               <MenuItem value="income">Income</MenuItem>
@@ -182,7 +197,7 @@ export default function NewTransactionPage() {
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
             >
-              {categories.map((c) => (
+              {eligibleCategories.map((c) => (
                 <MenuItem key={c.id} value={c.id}>
                   {c.name}
                 </MenuItem>

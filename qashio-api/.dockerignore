@@ -7,7 +7,6 @@ Dockerfile
 README.md
 dist
 test
-src
 .env
 .env.local
 .env.development

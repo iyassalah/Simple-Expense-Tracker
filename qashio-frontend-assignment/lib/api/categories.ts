@@ -1,5 +1,5 @@
 import { apiFetch } from '@/lib/api-client';
-import type { Category } from '@/lib/types/api';
+import type { Category, CategoryKind } from '@/lib/types/api';
 
 export function fetchCategories(): Promise<Category[]> {
   return apiFetch<Category[]>('/categories');
@@ -7,6 +7,7 @@ export function fetchCategories(): Promise<Category[]> {
 
 export interface CreateCategoryPayload {
   name: string;
+  kind: CategoryKind;
 }
 
 export function createCategory(

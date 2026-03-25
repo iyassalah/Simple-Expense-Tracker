@@ -8,6 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Category } from '../categories/entities/category.entity';
+import { CategoryKind } from '../categories/entities/category.entity';
 import {
   Transaction,
   TransactionType,
@@ -34,7 +35,7 @@ export class BudgetsService {
 
   async create(dto: CreateBudgetDto): Promise<Budget> {
     this.assertValidPeriod(dto.periodStart, dto.periodEnd);
-    await this.ensureCategoryExists(dto.categoryId);
+    await this.ensureExpenseCategory(dto.categoryId);
     await this.ensureNoOverlappingBudget(
       dto.categoryId,
       dto.periodStart,
@@ -80,7 +81,7 @@ export class BudgetsService {
     const budget = await this.findOne(id);
 
     if (dto.categoryId !== undefined) {
-      await this.ensureCategoryExists(dto.categoryId);
+      await this.ensureExpenseCategory(dto.categoryId);
       budget.categoryId = dto.categoryId;
     }
     if (dto.capAmount !== undefined) {
@@ -218,6 +219,21 @@ export class BudgetsService {
     });
     if (!categoryExists) {
       throw new BadRequestException(`Category ${categoryId} does not exist`);
+    }
+  }
+
+  private async ensureExpenseCategory(categoryId: string): Promise<void> {
+    const category = await this.categoriesRepository.findOne({
+      where: { id: categoryId },
+      select: { id: true, name: true, kind: true },
+    });
+    if (!category) {
+      throw new BadRequestException(`Category ${categoryId} does not exist`);
+    }
+    if (category.kind !== CategoryKind.EXPENSE) {
+      throw new BadRequestException(
+        `Budgets can only be created for expense categories. "${category.name}" is ${category.kind}.`,
+      );
     }
   }
 

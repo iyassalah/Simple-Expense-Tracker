@@ -10,11 +10,16 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
   TextField,
 } from '@mui/material';
 import { useState } from 'react';
 import { createCategory, type CreateCategoryPayload } from '@/lib/api/categories';
 import { ApiError as ApiErrorClass } from '@/lib/api-client';
+import type { CategoryKind } from '@/lib/types/api';
 
 const TITLE_ID = 'add-category-dialog-title';
 
@@ -35,6 +40,7 @@ export function AddCategoryDialog({
 }) {
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
+  const [kind, setKind] = useState<CategoryKind>('expense');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const { mutate, isPending } = useMutation({
@@ -42,6 +48,7 @@ export function AddCategoryDialog({
     onSuccess: async () => {
       setErrorMessage(null);
       setName('');
+      setKind('expense');
       await queryClient.invalidateQueries({ queryKey: ['categories'] });
       onClose();
     },
@@ -57,7 +64,7 @@ export function AddCategoryDialog({
       setErrorMessage('Category name is required.');
       return;
     }
-    mutate({ name: trimmed });
+    mutate({ name: trimmed, kind });
   };
 
   return (
@@ -67,6 +74,8 @@ export function AddCategoryDialog({
         <StacklessInput
           name={name}
           setName={setName}
+          kind={kind}
+          setKind={setKind}
           errorMessage={errorMessage}
         />
       </DialogContent>
@@ -92,15 +101,31 @@ export function AddCategoryDialog({
 function StacklessInput({
   name,
   setName,
+  kind,
+  setKind,
   errorMessage,
 }: {
   name: string;
   setName: (v: string) => void;
+  kind: CategoryKind;
+  setKind: (v: CategoryKind) => void;
   errorMessage: string | null;
 }) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, pt: 0.5 }}>
       {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
+      <FormControl fullWidth>
+        <InputLabel id="add-category-kind-label">Kind</InputLabel>
+        <Select
+          labelId="add-category-kind-label"
+          label="Kind"
+          value={kind}
+          onChange={(e) => setKind(e.target.value as CategoryKind)}
+        >
+          <MenuItem value="expense">Expense</MenuItem>
+          <MenuItem value="income">Income</MenuItem>
+        </Select>
+      </FormControl>
       <TextField
         autoFocus
         label="Category name"

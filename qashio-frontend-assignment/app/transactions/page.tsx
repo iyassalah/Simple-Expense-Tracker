@@ -30,6 +30,7 @@ import {
 } from '@/lib/api/transactions';
 import { ApiError } from '@/lib/api-client';
 import type {
+  CategoryKind,
   SortOrder,
   Transaction,
   TransactionSortBy,
@@ -105,6 +106,13 @@ export default function TransactionsPage() {
     }
     return m;
   }, [categories]);
+
+  const eligibleFilterCategories = useMemo(() => {
+    if (filterType === 'all') return categories;
+    const requiredKind: CategoryKind =
+      filterType === 'income' ? 'income' : 'expense';
+    return categories.filter((c) => c.kind === requiredKind);
+  }, [categories, filterType]);
 
   const {
     data: listData,
@@ -264,7 +272,7 @@ export default function TransactionsPage() {
             }}
           >
             <MenuItem value="">All categories</MenuItem>
-            {categories.map((c) => (
+            {eligibleFilterCategories.map((c) => (
               <MenuItem key={c.id} value={c.id}>
                 {c.name}
               </MenuItem>

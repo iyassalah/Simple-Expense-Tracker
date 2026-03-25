@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { CategoryKind } from '../entities/category.entity';
 
 export class CreateCategoryDto {
   @ApiProperty({ example: 'Groceries', maxLength: 255 })
@@ -7,4 +8,12 @@ export class CreateCategoryDto {
   @IsNotEmpty()
   @MaxLength(255)
   name: string;
+
+  @ApiProperty({
+    enum: CategoryKind,
+    example: CategoryKind.EXPENSE,
+    description: 'Income categories are for income transactions; expense categories are budgetable.',
+  })
+  @IsEnum(CategoryKind)
+  kind: CategoryKind;
 }

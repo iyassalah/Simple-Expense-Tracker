@@ -49,6 +49,13 @@ export default function CategoriesPage() {
         minWidth: 220,
       },
       {
+        field: 'kind',
+        headerName: 'Kind',
+        width: 120,
+        valueFormatter: (value: string) =>
+          value === 'income' ? 'Income' : value === 'expense' ? 'Expense' : value,
+      },
+      {
         field: 'createdAt',
         headerName: 'Created',
         minWidth: 200,

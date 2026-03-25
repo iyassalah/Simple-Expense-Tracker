@@ -7,6 +7,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Category } from '../categories/entities/category.entity';
+import { CategoryKind } from '../categories/entities/category.entity';
 import {
   TRANSACTION_CREATED,
   TRANSACTION_UPDATED,
@@ -31,7 +32,7 @@ export class TransactionsService {
   ) {}
 
   async create(dto: CreateTransactionDto): Promise<Transaction> {
-    await this.ensureCategoryExists(dto.categoryId);
+    await this.ensureCategoryIsValidForTransaction(dto.categoryId, dto.type);
 
     const transaction = this.transactionsRepository.create({
       amount: dto.amount,
@@ -106,15 +107,15 @@ export class TransactionsService {
   async update(id: string, dto: UpdateTransactionDto): Promise<Transaction> {
     const transaction = await this.findOne(id);
 
-    if (dto.categoryId) {
-      await this.ensureCategoryExists(dto.categoryId);
-      transaction.categoryId = dto.categoryId;
+    const nextCategoryId = dto.categoryId ?? transaction.categoryId;
+    const nextType = dto.type ?? transaction.type;
+    if (dto.categoryId !== undefined || dto.type !== undefined) {
+      await this.ensureCategoryIsValidForTransaction(nextCategoryId, nextType);
+      transaction.categoryId = nextCategoryId;
+      transaction.type = nextType;
     }
     if (dto.amount !== undefined) {
       transaction.amount = dto.amount;
-    }
-    if (dto.type !== undefined) {
-      transaction.type = dto.type;
     }
     if (dto.date !== undefined) {
       transaction.date = dto.date;
@@ -133,13 +134,23 @@ export class TransactionsService {
     await this.transactionsRepository.remove(transaction);
   }
 
-  private async ensureCategoryExists(categoryId: string): Promise<void> {
-    const categoryExists = await this.categoriesRepository.exists({
+  private async ensureCategoryIsValidForTransaction(
+    categoryId: string,
+    type: Transaction['type'],
+  ): Promise<void> {
+    const category = await this.categoriesRepository.findOne({
       where: { id: categoryId },
+      select: { id: true, name: true, kind: true },
     });
-    if (!categoryExists) {
+    if (!category) {
+      throw new BadRequestException(`Category ${categoryId} does not exist`);
+    }
+
+    const expectedKind =
+      type === 'income' ? CategoryKind.INCOME : CategoryKind.EXPENSE;
+    if (category.kind !== expectedKind) {
       throw new BadRequestException(
-        `Category ${categoryId} does not exist`,
+        `Category "${category.name}" is ${category.kind}-only and cannot be used for ${type} transactions`,
       );
     }
   }

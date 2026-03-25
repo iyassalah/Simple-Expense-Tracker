@@ -36,6 +36,7 @@ import { ApiError } from '@/lib/api-client';
 import type {
   Budget,
   CreateBudgetPayload,
+  CategoryKind,
   GetBudgetsQueryParams,
   UpdateBudgetPayload,
 } from '@/lib/types/api';
@@ -85,6 +86,10 @@ export default function BudgetsPage() {
     queryKey: ['categories'],
     queryFn: fetchCategories,
   });
+
+  const expenseCategories = useMemo(() => {
+    return categories.filter((c) => c.kind === ('expense' satisfies CategoryKind));
+  }, [categories]);
 
   const categoryNameByIdMemo = useMemo(() => {
     const m = new Map<string, string>();
@@ -508,7 +513,7 @@ export default function BudgetsPage() {
                   value={draftCategoryId}
                   onChange={(e) => setDraftCategoryId(e.target.value)}
                 >
-                  {categories.map((c) => (
+                  {expenseCategories.map((c) => (
                     <MenuItem key={c.id} value={c.id}>
                       {c.name}
                     </MenuItem>

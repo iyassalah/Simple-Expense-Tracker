@@ -7,6 +7,11 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+export enum CategoryKind {
+  INCOME = 'income',
+  EXPENSE = 'expense',
+}
+
 @Entity('categories')
 export class Category {
   @ApiProperty({ format: 'uuid' })
@@ -16,6 +21,15 @@ export class Category {
   @ApiProperty({ maxLength: 255, example: 'Groceries' })
   @Column({ type: 'varchar', length: 255, unique: true })
   name: string;
+
+  @ApiProperty({ enum: CategoryKind, example: CategoryKind.EXPENSE })
+  @Column({
+    type: 'enum',
+    enum: CategoryKind,
+    enumName: 'category_kind',
+    default: CategoryKind.EXPENSE,
+  })
+  kind: CategoryKind;
 
   @ApiProperty()
   @CreateDateColumn({ name: 'created_at' })
