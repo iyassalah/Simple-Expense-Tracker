@@ -30,7 +30,7 @@ const queryClientDefaults = {
     queries: {
       staleTime: 30_000,
       retry: 1,
-      refetchOnWindowFocus: true,
+      refetchOnWindowFocus: false,
     },
     mutations: {
       retry: 0,

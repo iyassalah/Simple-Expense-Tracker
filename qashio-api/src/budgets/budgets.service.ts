@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
@@ -34,6 +35,11 @@ export class BudgetsService {
   async create(dto: CreateBudgetDto): Promise<Budget> {
     this.assertValidPeriod(dto.periodStart, dto.periodEnd);
     await this.ensureCategoryExists(dto.categoryId);
+    await this.ensureNoOverlappingBudget(
+      dto.categoryId,
+      dto.periodStart,
+      dto.periodEnd,
+    );
 
     const budget = this.budgetsRepository.create({
       categoryId: dto.categoryId,
@@ -86,6 +92,13 @@ export class BudgetsService {
     this.assertValidPeriod(nextStart, nextEnd);
     budget.periodStart = nextStart;
     budget.periodEnd = nextEnd;
+
+    await this.ensureNoOverlappingBudget(
+      budget.categoryId,
+      budget.periodStart,
+      budget.periodEnd,
+      budget.id,
+    );
 
     return this.budgetsRepository.save(budget);
   }
@@ -206,5 +219,33 @@ export class BudgetsService {
     if (!categoryExists) {
       throw new BadRequestException(`Category ${categoryId} does not exist`);
     }
+  }
+
+  /**
+   * Budgets are not allowed to overlap for the same category, even at a single instant.
+   * Overlap check (inclusive bounds): existingStart <= requestedEnd AND existingEnd >= requestedStart.
+   */
+  private async ensureNoOverlappingBudget(
+    categoryId: string,
+    periodStart: Date,
+    periodEnd: Date,
+    excludeBudgetId?: string,
+  ): Promise<void> {
+    const qb = this.budgetsRepository
+      .createQueryBuilder('b')
+      .where('b.category_id = :categoryId', { categoryId })
+      .andWhere('b.period_start <= :periodEnd', { periodEnd })
+      .andWhere('b.period_end >= :periodStart', { periodStart });
+
+    if (excludeBudgetId) {
+      qb.andWhere('b.id <> :excludeBudgetId', { excludeBudgetId });
+    }
+
+    const conflicting = await qb.getOne();
+    if (!conflicting) return;
+
+    throw new ConflictException(
+      `Budget conflicts with an existing budget for this category (${conflicting.periodStart.toISOString()} - ${conflicting.periodEnd.toISOString()}).`,
+    );
   }
 }

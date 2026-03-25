@@ -13,17 +13,40 @@ export default function NavBar() {
         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
           Qashio
         </Typography>
-        <Box>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
           <Button
             color="inherit"
             component={Link}
-            href="/transactions/new"
-            sx={{ 
-              fontWeight: pathname === '/transactions/new' ? 'bold' : 'normal',
-              textDecoration: pathname === '/transactions/new' ? 'underline' : 'none'
+            href="/budgets"
+            sx={{
+              fontWeight: pathname === '/budgets' ? 'bold' : 'normal',
+              textDecoration: pathname === '/budgets' ? 'underline' : 'none',
             }}
           >
-            New Transaction
+            Budgets
+          </Button>
+          <Button
+            color="inherit"
+            component={Link}
+            href="/categories"
+            sx={{
+              fontWeight: pathname === '/categories' ? 'bold' : 'normal',
+              textDecoration: pathname === '/categories' ? 'underline' : 'none',
+            }}
+          >
+            Categories
+          </Button>
+          <Button
+            color="inherit"
+            component={Link}
+            href="/transactions"
+            sx={{
+              fontWeight: pathname === '/transactions' ? 'bold' : 'normal',
+              textDecoration:
+                pathname === '/transactions' ? 'underline' : 'none',
+            }}
+          >
+            Transactions
           </Button>
         </Box>
       </Toolbar>

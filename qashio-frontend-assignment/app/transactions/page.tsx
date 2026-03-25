@@ -21,6 +21,8 @@ import {
 } from '@mui/x-data-grid';
 import { endOfDay, startOfDay } from 'date-fns';
 import { useCallback, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { TransactionDetailDialog } from './TransactionDetailDialog';
 import { fetchCategories } from '@/lib/api/categories';
 import {
   fetchTransactions,
@@ -53,6 +55,9 @@ export default function TransactionsPage() {
   const [filterCategoryId, setFilterCategoryId] = useState('');
   const [fromDate, setFromDate] = useState<Date | null>(null);
   const [toDate, setToDate] = useState<Date | null>(null);
+  const [selectedTransactionId, setSelectedTransactionId] = useState<
+    string | null
+  >(null);
 
   const fromIso = useMemo(
     () => (fromDate ? startOfDay(fromDate).toISOString() : undefined),
@@ -126,9 +131,12 @@ export default function TransactionsPage() {
 
   const handleSortModelChange = useCallback((model: GridSortModel) => {
     const first = model[0];
-    if (!first || !first.sort) {
-      setSortBy('date');
-      setSortOrder('DESC');
+    if (!first) {
+      return;
+    }
+    // MUI can emit an "empty" or "unsorted" sortModel during toggle interactions.
+    // Since we control `sortModel` via state, ignore cleared sort to avoid getting stuck.
+    if (!first.sort) {
       return;
     }
     if (!isSortField(first.field)) {
@@ -190,9 +198,24 @@ export default function TransactionsPage() {
 
   return (
     <Box>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Transactions
-      </Typography>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        alignItems={{ xs: 'flex-start', sm: 'center' }}
+        justifyContent="space-between"
+        spacing={2}
+        sx={{ mb: 2 }}
+      >
+        <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 0 }}>
+          Transactions
+        </Typography>
+        <Button
+          variant="contained"
+          component={Link}
+          href="/transactions/new"
+        >
+          New Transaction
+        </Button>
+      </Stack>
 
       {isError && (
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -296,6 +319,7 @@ export default function TransactionsPage() {
             loading={listLoading}
             paginationMode="server"
             sortingMode="server"
+            sortingOrder={['asc', 'desc']}
             sortModel={sortModel}
             onSortModelChange={handleSortModelChange}
             rowCount={total}
@@ -305,6 +329,9 @@ export default function TransactionsPage() {
             disableRowSelectionOnClick
             disableColumnFilter
             disableColumnMenu
+            onRowClick={(params) => {
+              setSelectedTransactionId(params.row.id);
+            }}
             sx={{
               border: 1,
               borderColor: 'divider',
@@ -312,10 +339,25 @@ export default function TransactionsPage() {
               '& .MuiDataGrid-columnHeaders': {
                 bgcolor: 'action.hover',
               },
+              '& .MuiDataGrid-row': { cursor: 'pointer' },
+              '& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within': {
+                outline: 'none',
+              },
+              '& .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-columnHeader:focus-within':
+                {
+                  outline: 'none',
+                },
             }}
           />
         </Box>
       )}
+
+      <TransactionDetailDialog
+        open={selectedTransactionId !== null}
+        transactionId={selectedTransactionId}
+        categoryNameById={categoryNameById}
+        onClose={() => setSelectedTransactionId(null)}
+      />
     </Box>
   );
 }

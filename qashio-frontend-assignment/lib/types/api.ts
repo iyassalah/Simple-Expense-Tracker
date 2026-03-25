@@ -28,6 +28,47 @@ export interface PaginatedTransactions {
   limit: number;
 }
 
+export interface Budget {
+  id: string;
+  categoryId: string;
+  capAmount: number;
+  periodStart: string;
+  periodEnd: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BudgetUsageResponse {
+  id: string;
+  categoryId: string;
+  capAmount: number;
+  periodStart: string;
+  periodEnd: string;
+  effectiveFrom: string;
+  effectiveTo: string;
+  spent: number;
+  remaining: number;
+  percentUsed: number | null;
+}
+
+export interface GetBudgetsQueryParams {
+  categoryId?: string;
+}
+
+export interface CreateBudgetPayload {
+  categoryId: string;
+  capAmount: number;
+  periodStart: string; // ISO string
+  periodEnd: string; // ISO string
+}
+
+export interface UpdateBudgetPayload {
+  categoryId?: string;
+  capAmount?: number;
+  periodStart?: string;
+  periodEnd?: string;
+}
+
 export type TransactionSortBy = 'date' | 'amount' | 'type' | 'createdAt';
 export type SortOrder = 'ASC' | 'DESC';
 

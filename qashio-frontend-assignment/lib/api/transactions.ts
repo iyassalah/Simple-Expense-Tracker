@@ -2,6 +2,8 @@ import { apiFetch } from '@/lib/api-client';
 import type {
   GetTransactionsQueryParams,
   PaginatedTransactions,
+  Transaction,
+  TransactionType,
 } from '@/lib/types/api';
 
 /** README: 10 items per page on the transactions list. */
@@ -45,4 +47,47 @@ export function fetchTransactions(
   return apiFetch<PaginatedTransactions>(
     `/transactions${qs ? `?${qs}` : ''}`,
   );
+}
+
+export function fetchTransaction(id: string): Promise<Transaction> {
+  return apiFetch<Transaction>(`/transactions/${encodeURIComponent(id)}`);
+}
+
+export interface CreateTransactionPayload {
+  amount: number;
+  categoryId: string;
+  date: string; // ISO date string
+  type: TransactionType;
+}
+
+export function createTransaction(
+  payload: CreateTransactionPayload,
+): Promise<Transaction> {
+  return apiFetch<Transaction>('/transactions', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export interface UpdateTransactionPayload {
+  amount?: number;
+  type?: TransactionType;
+  categoryId?: string;
+  date?: string; // ISO date string
+}
+
+export function updateTransaction(
+  id: string,
+  payload: UpdateTransactionPayload,
+): Promise<Transaction> {
+  return apiFetch<Transaction>(`/transactions/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteTransaction(id: string): Promise<void> {
+  return apiFetch<void>(`/transactions/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
 }
