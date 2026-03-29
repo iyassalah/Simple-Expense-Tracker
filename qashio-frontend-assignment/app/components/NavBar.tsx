@@ -2,11 +2,22 @@
 
 import { AppBar, Toolbar, Typography, Box, Button } from '@mui/material';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { logoutUser } from '@/lib/api/auth';
 
 export default function NavBar() {
   const pathname = usePathname();
-  
+  const router = useRouter();
+
+  async function handleLogout() {
+    try {
+      await logoutUser();
+    } catch {
+      /* still navigate away */
+    }
+    router.replace('/login');
+  }
+
   return (
     <AppBar position="static" color="primary" elevation={0}>
       <Toolbar>
@@ -47,6 +58,9 @@ export default function NavBar() {
             }}
           >
             Transactions
+          </Button>
+          <Button color="inherit" onClick={handleLogout}>
+            Log out
           </Button>
         </Box>
       </Toolbar>

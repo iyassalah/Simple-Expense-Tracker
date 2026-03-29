@@ -33,16 +33,18 @@ export class BudgetsService {
     private readonly categoriesRepository: Repository<Category>,
   ) {}
 
-  async create(dto: CreateBudgetDto): Promise<Budget> {
+  async create(dto: CreateBudgetDto, userId: string): Promise<Budget> {
     this.assertValidPeriod(dto.periodStart, dto.periodEnd);
-    await this.ensureExpenseCategory(dto.categoryId);
+    await this.ensureExpenseCategory(dto.categoryId, userId);
     await this.ensureNoOverlappingBudget(
+      userId,
       dto.categoryId,
       dto.periodStart,
       dto.periodEnd,
     );
 
     const budget = this.budgetsRepository.create({
+      userId,
       categoryId: dto.categoryId,
       capAmount: dto.capAmount,
       periodStart: dto.periodStart,
@@ -52,8 +54,13 @@ export class BudgetsService {
     return this.budgetsRepository.save(budget);
   }
 
-  async findAll(query: GetBudgetsQueryDto): Promise<Budget[]> {
-    const qb = this.budgetsRepository.createQueryBuilder('budget');
+  async findAll(
+    userId: string,
+    query: GetBudgetsQueryDto,
+  ): Promise<Budget[]> {
+    const qb = this.budgetsRepository
+      .createQueryBuilder('budget')
+      .andWhere('budget.user_id = :userId', { userId });
 
     if (query.categoryId) {
       qb.andWhere('budget.category_id = :categoryId', {
@@ -67,8 +74,10 @@ export class BudgetsService {
       .getMany();
   }
 
-  async findOne(id: string): Promise<Budget> {
-    const budget = await this.budgetsRepository.findOne({ where: { id } });
+  async findOne(id: string, userId: string): Promise<Budget> {
+    const budget = await this.budgetsRepository.findOne({
+      where: { id, userId },
+    });
 
     if (!budget) {
       throw new NotFoundException(`Budget ${id} was not found`);
@@ -77,11 +86,15 @@ export class BudgetsService {
     return budget;
   }
 
-  async update(id: string, dto: UpdateBudgetDto): Promise<Budget> {
-    const budget = await this.findOne(id);
+  async update(
+    id: string,
+    dto: UpdateBudgetDto,
+    userId: string,
+  ): Promise<Budget> {
+    const budget = await this.findOne(id, userId);
 
     if (dto.categoryId !== undefined) {
-      await this.ensureExpenseCategory(dto.categoryId);
+      await this.ensureExpenseCategory(dto.categoryId, userId);
       budget.categoryId = dto.categoryId;
     }
     if (dto.capAmount !== undefined) {
@@ -95,6 +108,7 @@ export class BudgetsService {
     budget.periodEnd = nextEnd;
 
     await this.ensureNoOverlappingBudget(
+      userId,
       budget.categoryId,
       budget.periodStart,
       budget.periodEnd,
@@ -104,8 +118,8 @@ export class BudgetsService {
     return this.budgetsRepository.save(budget);
   }
 
-  async remove(id: string): Promise<void> {
-    const budget = await this.findOne(id);
+  async remove(id: string, userId: string): Promise<void> {
+    const budget = await this.findOne(id, userId);
     await this.budgetsRepository.remove(budget);
   }
 
@@ -116,8 +130,9 @@ export class BudgetsService {
   async getUsage(
     id: string,
     query: GetBudgetUsageQueryDto,
+    userId: string,
   ): Promise<BudgetUsageResponseDto> {
-    const budget = await this.findOne(id);
+    const budget = await this.findOne(id, userId);
 
     const requestFrom = query.from ? new Date(query.from) : budget.periodStart;
     const requestTo = query.to ? new Date(query.to) : budget.periodEnd;
@@ -130,7 +145,8 @@ export class BudgetsService {
       const row = await this.transactionsRepository
         .createQueryBuilder('t')
         .select('COALESCE(SUM(t.amount), 0)', 'sum')
-        .where('t.category_id = :categoryId', {
+        .where('t.user_id = :userId', { userId: budget.userId })
+        .andWhere('t.category_id = :categoryId', {
           categoryId: budget.categoryId,
         })
         .andWhere('t.type = :type', { type: TransactionType.EXPENSE })
@@ -164,6 +180,7 @@ export class BudgetsService {
    * whose period contains the transaction date and whose cap is reached or exceeded.
    */
   async warnIfBudgetsExceededAfterExpense(
+    userId: string,
     categoryId: string,
     transactionDate: Date,
     type: TransactionType,
@@ -172,7 +189,7 @@ export class BudgetsService {
       return;
     }
 
-    const budgets = await this.findAll({ categoryId });
+    const budgets = await this.findAll(userId, { categoryId });
     const t = transactionDate.getTime();
 
     for (const budget of budgets) {
@@ -183,7 +200,7 @@ export class BudgetsService {
         continue;
       }
 
-      const usage = await this.getUsage(budget.id, {});
+      const usage = await this.getUsage(budget.id, {}, userId);
       const overCap =
         usage.capAmount > 0
           ? usage.spent >= usage.capAmount
@@ -213,18 +230,12 @@ export class BudgetsService {
     return a.getTime() <= b.getTime() ? a : b;
   }
 
-  private async ensureCategoryExists(categoryId: string): Promise<void> {
-    const categoryExists = await this.categoriesRepository.exists({
-      where: { id: categoryId },
-    });
-    if (!categoryExists) {
-      throw new BadRequestException(`Category ${categoryId} does not exist`);
-    }
-  }
-
-  private async ensureExpenseCategory(categoryId: string): Promise<void> {
+  private async ensureExpenseCategory(
+    categoryId: string,
+    userId: string,
+  ): Promise<void> {
     const category = await this.categoriesRepository.findOne({
-      where: { id: categoryId },
+      where: { id: categoryId, userId },
       select: { id: true, name: true, kind: true },
     });
     if (!category) {
@@ -242,6 +253,7 @@ export class BudgetsService {
    * Overlap check (inclusive bounds): existingStart <= requestedEnd AND existingEnd >= requestedStart.
    */
   private async ensureNoOverlappingBudget(
+    userId: string,
     categoryId: string,
     periodStart: Date,
     periodEnd: Date,
@@ -249,7 +261,8 @@ export class BudgetsService {
   ): Promise<void> {
     const qb = this.budgetsRepository
       .createQueryBuilder('b')
-      .where('b.category_id = :categoryId', { categoryId })
+      .where('b.user_id = :userId', { userId })
+      .andWhere('b.category_id = :categoryId', { categoryId })
       .andWhere('b.period_start <= :periodEnd', { periodEnd })
       .andWhere('b.period_end >= :periodStart', { periodStart });
 

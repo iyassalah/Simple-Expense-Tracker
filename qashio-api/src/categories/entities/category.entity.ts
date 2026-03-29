@@ -18,8 +18,12 @@ export class Category {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @ApiProperty({ format: 'uuid' })
+  @Column({ name: 'user_id', type: 'uuid' })
+  userId: string;
+
   @ApiProperty({ maxLength: 255, example: 'Groceries' })
-  @Column({ type: 'varchar', length: 255, unique: true })
+  @Column({ type: 'varchar', length: 255 })
   name: string;
 
   @ApiProperty({ enum: CategoryKind, example: CategoryKind.EXPENSE })

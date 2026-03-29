@@ -13,6 +13,10 @@ export class Budget {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @ApiProperty({ format: 'uuid' })
+  @Column({ name: 'user_id', type: 'uuid' })
+  userId: string;
+
   @ApiProperty({ format: 'uuid', example: 'f4ac4a34-227f-4763-9f63-8df0f7adf531' })
   @Column({ name: 'category_id', type: 'uuid' })
   categoryId: string;

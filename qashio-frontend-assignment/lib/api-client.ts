@@ -1,3 +1,8 @@
+import {
+  getStoredAccessToken,
+  setStoredAccessToken,
+} from '@/lib/auth/token';
+
 export class ApiError extends Error {
   constructor(
     readonly statusCode: number,
@@ -35,19 +40,53 @@ export function getApiBaseUrl(): string {
   return raw.replace(/\/$/, '');
 }
 
-export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const base = getApiBaseUrl();
-  const normalized = path.startsWith('/') ? path : `/${path}`;
-  const url = `${base}${normalized}`;
+function normalizePath(path: string): string {
+  return path.startsWith('/') ? path : `/${path}`;
+}
 
-  const headers = new Headers(init?.headers);
-  const body = init?.body;
-  if (body && !(body instanceof FormData) && !headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json');
+/** Paths that must not send Bearer and must not trigger refresh retry on 401. */
+function isPublicAuthPath(path: string): boolean {
+  const p = normalizePath(path).split('?')[0];
+  return (
+    p === '/auth/login' ||
+    p === '/auth/register' ||
+    p === '/auth/refresh'
+  );
+}
+
+let refreshInFlight: Promise<boolean> | null = null;
+
+async function tryRefreshSession(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      const base = getApiBaseUrl();
+      const res = await fetch(`${base}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        return false;
+      }
+      const data = (await res.json()) as { accessToken?: string };
+      if (data.accessToken) {
+        setStoredAccessToken(data.accessToken);
+        return true;
+      }
+      return false;
+    })().catch(() => false).finally(() => {
+      refreshInFlight = null;
+    });
   }
+  return refreshInFlight;
+}
 
-  const res = await fetch(url, { ...init, headers, credentials: 'include' });
+function redirectToLogin(): void {
+  if (typeof window !== 'undefined') {
+    window.location.assign('/login');
+  }
+}
 
+async function parseResponse<T>(res: Response): Promise<T> {
   const contentType = res.headers.get('content-type');
   const isJson = contentType?.includes('application/json');
 
@@ -86,4 +125,41 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   }
 
   return JSON.parse(text) as T;
+}
+
+export async function apiFetch<T>(
+  path: string,
+  init?: RequestInit,
+  retried = false,
+): Promise<T> {
+  const base = getApiBaseUrl();
+  const normalized = normalizePath(path);
+  const url = `${base}${normalized}`;
+
+  const headers = new Headers(init?.headers);
+  const body = init?.body;
+  if (body && !(body instanceof FormData) && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  if (!isPublicAuthPath(normalized)) {
+    const token = getStoredAccessToken();
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+  }
+
+  const res = await fetch(url, { ...init, headers, credentials: 'include' });
+
+  if (res.status === 401 && !retried && !isPublicAuthPath(normalized)) {
+    const refreshed = await tryRefreshSession();
+    if (refreshed) {
+      return apiFetch<T>(path, init, true);
+    }
+    setStoredAccessToken(null);
+    redirectToLogin();
+    throw new ApiError(401, 'Session expired');
+  }
+
+  return parseResponse<T>(res);
 }

@@ -1,6 +1,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
@@ -30,6 +31,8 @@ function resolveCorsOrigin(): boolean | string | string[] {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.use(cookieParser());
+
   app.enableCors({
     origin: resolveCorsOrigin(),
     credentials: true,
@@ -44,14 +47,22 @@ async function bootstrap() {
     }),
   );
 
-  const config = new DocumentBuilder() 
+  const config = new DocumentBuilder()
     .setTitle('Qashio API')
-    .setDescription('Simple Expense Tracker API')// TODO: add a description of the API.
+    .setDescription(
+      'Simple Expense Tracker API. Use POST /auth/login or /auth/register for accessToken; refresh token is an httpOnly cookie — use the web app or POST /auth/refresh with credentials.',
+    )
     .setVersion('0.0.1')
+    .addBearerAuth(
+      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', in: 'header' },
+      'access-token',
+    )
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, document);
+  SwaggerModule.setup('docs', app, document, {
+    swaggerOptions: { persistAuthorization: true },
+  });
 
   await app.listen(process.env.PORT ?? 3000);
 }

@@ -135,4 +135,11 @@ This command will:
 - Start the services defined in `docker-compose.yml`
 - Make the application accessible locally
 
+### Authentication (implemented)
+
+- **Frontend** (browser): [http://localhost:4000](http://localhost:4000). Unauthenticated users are sent to **`/login`**. Register at **`/register`** or sign in. The access JWT is stored in **`sessionStorage`**; the **refresh token** is an **httpOnly** cookie from the API (`POST /auth/register`, `/auth/login`). API calls use **`credentials: 'include'`** and **`Authorization: Bearer`**.
+- **API**: [http://localhost:3000](http://localhost:3000). Swagger UI: **`/docs`**. Use **Authorize** with a Bearer token from login/register. **`CORS_ORIGIN`** must match the UI origin (`http://localhost:4000` in Compose).
+- **Demo user** (after migrations): `demo@qashio.local` / `Password123!` — same data as pre-migration seed; new users can **register** and get an empty account.
+- **Env**: Copy `qashio-api/.env.example`; set **`JWT_ACCESS_SECRET`** to a strong value in real deployments. See `.env.example` for cookie and TTL variables.
+
 Happy tracking! 💸

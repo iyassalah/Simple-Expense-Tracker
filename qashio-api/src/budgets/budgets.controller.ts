@@ -11,11 +11,13 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiOkResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { BudgetsService } from './budgets.service';
 import { BudgetUsageResponseDto } from './dto/budget-usage-response.dto';
 import { CreateBudgetDto } from './dto/create-budget.dto';
@@ -25,50 +27,65 @@ import { UpdateBudgetDto } from './dto/update-budget.dto';
 import { Budget } from './entities/budget.entity';
 
 @ApiTags('budgets')
+@ApiBearerAuth('access-token')
 @Controller('budgets')
 export class BudgetsController {
   constructor(private readonly budgetsService: BudgetsService) {}
 
   @Post()
   @ApiCreatedResponse({ type: Budget })
-  create(@Body() dto: CreateBudgetDto): Promise<Budget> {
-    return this.budgetsService.create(dto);
+  create(
+    @CurrentUser('sub') userId: string,
+    @Body() dto: CreateBudgetDto,
+  ): Promise<Budget> {
+    return this.budgetsService.create(dto, userId);
   }
 
   @Get()
   @ApiOkResponse({ type: [Budget] })
-  findAll(@Query() query: GetBudgetsQueryDto): Promise<Budget[]> {
-    return this.budgetsService.findAll(query);
+  findAll(
+    @CurrentUser('sub') userId: string,
+    @Query() query: GetBudgetsQueryDto,
+  ): Promise<Budget[]> {
+    return this.budgetsService.findAll(userId, query);
   }
 
   @Get(':id/usage')
   @ApiOkResponse({ type: BudgetUsageResponseDto })
   getUsage(
+    @CurrentUser('sub') userId: string,
     @Param('id', new ParseUUIDPipe()) id: string,
     @Query() query: GetBudgetUsageQueryDto,
   ): Promise<BudgetUsageResponseDto> {
-    return this.budgetsService.getUsage(id, query);
+    return this.budgetsService.getUsage(id, query, userId);
   }
 
   @Get(':id')
   @ApiOkResponse({ type: Budget })
-  findOne(@Param('id', new ParseUUIDPipe()) id: string): Promise<Budget> {
-    return this.budgetsService.findOne(id);
+  findOne(
+    @CurrentUser('sub') userId: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<Budget> {
+    return this.budgetsService.findOne(id, userId);
   }
 
   @Put(':id')
   @ApiOkResponse({ type: Budget })
   update(
+    @CurrentUser('sub') userId: string,
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: UpdateBudgetDto,
   ): Promise<Budget> {
-    return this.budgetsService.update(id, dto);
+    return this.budgetsService.update(id, dto, userId);
   }
 
   @Delete(':id')
   @HttpCode(204)
   @ApiNoContentResponse()
-  async remove(@Param('id', new ParseUUIDPipe()) id: string): Promise<void> {
-    await this.budgetsService.remove(id);
+  async remove(
+    @CurrentUser('sub') userId: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<void> {
+    await this.budgetsService.remove(id, userId);
   }
 }

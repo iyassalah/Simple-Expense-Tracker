@@ -31,10 +31,18 @@ export class TransactionsService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  async create(dto: CreateTransactionDto): Promise<Transaction> {
-    await this.ensureCategoryIsValidForTransaction(dto.categoryId, dto.type);
+  async create(
+    dto: CreateTransactionDto,
+    userId: string,
+  ): Promise<Transaction> {
+    await this.ensureCategoryIsValidForTransaction(
+      dto.categoryId,
+      dto.type,
+      userId,
+    );
 
     const transaction = this.transactionsRepository.create({
+      userId,
       amount: dto.amount,
       type: dto.type,
       categoryId: dto.categoryId,
@@ -49,7 +57,10 @@ export class TransactionsService {
     return saved;
   }
 
-  async findAll(query: GetTransactionsQueryDto): Promise<{
+  async findAll(
+    query: GetTransactionsQueryDto,
+    userId: string,
+  ): Promise<{
     data: Transaction[];
     total: number;
     page: number;
@@ -58,6 +69,8 @@ export class TransactionsService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 10;
     const qb = this.transactionsRepository.createQueryBuilder('transaction');
+
+    qb.andWhere('transaction.user_id = :userId', { userId });
 
     if (query.type) {
       qb.andWhere('transaction.type = :type', { type: query.type });
@@ -92,9 +105,9 @@ export class TransactionsService {
     return { data, total, page, limit };
   }
 
-  async findOne(id: string): Promise<Transaction> {
+  async findOne(id: string, userId: string): Promise<Transaction> {
     const transaction = await this.transactionsRepository.findOne({
-      where: { id },
+      where: { id, userId },
     });
 
     if (!transaction) {
@@ -104,13 +117,21 @@ export class TransactionsService {
     return transaction;
   }
 
-  async update(id: string, dto: UpdateTransactionDto): Promise<Transaction> {
-    const transaction = await this.findOne(id);
+  async update(
+    id: string,
+    dto: UpdateTransactionDto,
+    userId: string,
+  ): Promise<Transaction> {
+    const transaction = await this.findOne(id, userId);
 
     const nextCategoryId = dto.categoryId ?? transaction.categoryId;
     const nextType = dto.type ?? transaction.type;
     if (dto.categoryId !== undefined || dto.type !== undefined) {
-      await this.ensureCategoryIsValidForTransaction(nextCategoryId, nextType);
+      await this.ensureCategoryIsValidForTransaction(
+        nextCategoryId,
+        nextType,
+        userId,
+      );
       transaction.categoryId = nextCategoryId;
       transaction.type = nextType;
     }
@@ -129,17 +150,18 @@ export class TransactionsService {
     return saved;
   }
 
-  async remove(id: string): Promise<void> {
-    const transaction = await this.findOne(id);
+  async remove(id: string, userId: string): Promise<void> {
+    const transaction = await this.findOne(id, userId);
     await this.transactionsRepository.remove(transaction);
   }
 
   private async ensureCategoryIsValidForTransaction(
     categoryId: string,
     type: Transaction['type'],
+    userId: string,
   ): Promise<void> {
     const category = await this.categoriesRepository.findOne({
-      where: { id: categoryId },
+      where: { id: categoryId, userId },
       select: { id: true, name: true, kind: true },
     });
     if (!category) {

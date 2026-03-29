@@ -1,14 +1,42 @@
 'use client';
 
-import { Container, Box, Paper } from '@mui/material';
+import { Container, Box, Paper, CircularProgress } from '@mui/material';
 import NavBar from './NavBar';
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { getStoredAccessToken } from '@/lib/auth/token';
 
 interface PageLayoutProps {
   children: ReactNode;
 }
 
 export default function PageLayout({ children }: PageLayoutProps) {
+  const router = useRouter();
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (!getStoredAccessToken()) {
+      router.replace('/login');
+      return;
+    }
+    setReady(true);
+  }, [router]);
+
+  if (!ready) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '60vh',
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <NavBar />

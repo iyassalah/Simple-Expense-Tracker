@@ -14,8 +14,9 @@ export class CategoriesService {
     private readonly categoriesRepository: Repository<Category>,
   ) {}
 
-  async create(dto: CreateCategoryDto): Promise<Category> {
+  async create(dto: CreateCategoryDto, userId: string): Promise<Category> {
     const category = this.categoriesRepository.create({
+      userId,
       name: dto.name.trim(),
       kind: dto.kind,
     });
@@ -32,8 +33,9 @@ export class CategoriesService {
     }
   }
 
-  async findAll(): Promise<Category[]> {
+  async findAll(userId: string): Promise<Category[]> {
     return this.categoriesRepository.find({
+      where: { userId },
       order: { name: 'ASC' },
     });
   }

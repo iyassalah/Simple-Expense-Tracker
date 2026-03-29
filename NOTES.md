@@ -14,6 +14,10 @@ Notes:
 - The API container **auto-runs TypeORM migrations on startup** (so no extra manual steps are required).
 - If you previously ran containers, `docker-compose down -v` will reset the DB volume.
 
+## AI assistance
+
+**AI assistance:** I used an AI coding assistant during planing/reviewing and implementation. All code was reviewed and approved by me.
+
 ## URLs
 
 | Service | URL |

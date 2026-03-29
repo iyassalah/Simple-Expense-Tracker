@@ -3,6 +3,7 @@ import { Transaction, TransactionType } from '../transactions/entities/transacti
 // Payload emitted when a transaction is persisted.
 export interface TransactionPersistedPayload {
   transactionId: string;
+  userId: string;
   categoryId: string;
   amount: number;
   type: TransactionType;
@@ -17,6 +18,7 @@ export function transactionPayloadFromEntity(
 ): TransactionPersistedPayload {
   return {
     transactionId: entity.id,
+    userId: entity.userId,
     categoryId: entity.categoryId,
     amount: entity.amount,
     type: entity.type,

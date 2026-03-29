@@ -17,6 +17,7 @@ export class TransactionBudgetListener {
   async handleCreated(payload: TransactionPersistedPayload): Promise<void> {
     try {
       await this.budgetsService.warnIfBudgetsExceededAfterExpense(
+        payload.userId,
         payload.categoryId,
         payload.date,
         payload.type,
@@ -33,6 +34,7 @@ export class TransactionBudgetListener {
   async handleUpdated(payload: TransactionPersistedPayload): Promise<void> {
     try {
       await this.budgetsService.warnIfBudgetsExceededAfterExpense(
+        payload.userId,
         payload.categoryId,
         payload.date,
         payload.type,
